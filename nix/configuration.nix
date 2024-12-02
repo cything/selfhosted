@@ -16,6 +16,7 @@ in {
   sops.secrets."borg/crash" = { };
   sops.secrets."anki/cy" = { };
   sops.secrets."ntfy" = { };
+  sops.secrets."rclone" = { };
 
   boot.loader.grub.enable = true;
   boot.loader.grub.device = "/dev/vda";
@@ -232,6 +233,21 @@ in {
       upstream-base-url = "https://ntfy.sh";
       auth-default-access = "deny-all";
       behind-proxy = true;
+    };
+  };
+
+  systemd.services.immich-mount = {
+    enable = true;
+    description = "Mount the immich data remote";
+    after = [ "network-online.target" ];
+    requires = [ "network-online.target" ];
+    wantedBy = [ "default.target" ];
+    serviceConfig = {
+      Type = "notify";
+      ExecStartPre = "/usr/bin/env mkdir -p /mnt/photos";
+      ExecStart = "${pkgs.rclone}/bin/rclone mount --config /home/yt/.config/rclone/rclone.conf --dir-cache-time 720h --poll-interval 0 --vfs-cache-mode writes photos: /mnt/photos ";
+      ExecStop = "/bin/fusermount -u /mnt/photos";
+      EnvironmentFile = "/run/secrets/rclone";
     };
   };
 }
